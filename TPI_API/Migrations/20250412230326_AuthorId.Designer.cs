@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TPI_API.Context;
 
@@ -10,9 +11,11 @@ using TPI_API.Context;
 namespace TPI_API.Migrations
 {
     [DbContext(typeof(TPIDbContext))]
-    partial class TPIDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250412230326_AuthorId")]
+    partial class AuthorId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

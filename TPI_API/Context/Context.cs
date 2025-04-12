@@ -10,5 +10,6 @@ public class TPIDbContext : DbContext
     }
 
     public DbSet<Test> Tests { get; set; }
+
 }
 
