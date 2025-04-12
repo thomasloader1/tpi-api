@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TPI_API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+25132a0509375b77de0f162899809603fe78b9d9")]
 [assembly: System.Reflection.AssemblyProductAttribute("TPI_API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TPI_API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

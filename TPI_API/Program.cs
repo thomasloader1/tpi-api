@@ -1,6 +1,14 @@
-var builder = WebApplication.CreateBuilder(args);
+using DotNetEnv;
+using Microsoft.EntityFrameworkCore;
+using TPI_API.Context;
 
+var builder = WebApplication.CreateBuilder(args);
+Env.Load();
 // Add services to the container.
+var connectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING") ?? builder.Configuration.GetConnectionString("DefaultConnection");
+
+builder.Services.AddDbContext<TPIDbContext>(options =>
+    options.UseSqlServer(connectionString));
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
