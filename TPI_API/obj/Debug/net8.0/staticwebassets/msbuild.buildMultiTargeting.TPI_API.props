@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="..\build\TPI_API.props" />
-</Project>

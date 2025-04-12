@@ -1,4 +1,4 @@
 .vs/
-./TPI_API/.env
-./TPI_API/bin/*
-./TPI_API/obj/*
+TPI_API/.env
+TPI_API/bin/*
+TPI_API/obj/*
