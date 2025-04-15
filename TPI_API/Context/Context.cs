@@ -1,8 +1,9 @@
 ﻿namespace TPI_API.Context;
 using TPI_API.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
-public class TPIDbContext : DbContext
+public class TPIDbContext : IdentityDbContext
 {
     public TPIDbContext(DbContextOptions<TPIDbContext> options)
         : base(options)
