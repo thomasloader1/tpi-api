@@ -3,12 +3,9 @@ using TPI_API.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
-public class TPIDbContext : IdentityDbContext
+public class TPIDbContext : IdentityDbContext<User>
 {
-    public TPIDbContext(DbContextOptions<TPIDbContext> options)
-        : base(options)
-    {
-    }
+    public TPIDbContext(DbContextOptions<TPIDbContext> options): base(options) { }
 
     public DbSet<Test> Tests { get; set; }
 
