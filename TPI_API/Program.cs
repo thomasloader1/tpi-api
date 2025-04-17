@@ -59,6 +59,20 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddTransient<IEmailSender<User>, NoOpEmailSender<User>>();
 
+//CORS
+var frontURL = Environment.GetEnvironmentVariable("FRONT_URL");
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AngularFrontend", policy =>
+    {
+        policy.WithOrigins(frontURL) 
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials(); // Solo si usás cookies o auth por header
+    });
+});
+
 
 var app = builder.Build();
 
@@ -68,6 +82,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseCors("AngularFrontend");
 
 app.UseHttpsRedirection();
 
