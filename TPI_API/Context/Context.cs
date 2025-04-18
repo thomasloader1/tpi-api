@@ -9,5 +9,7 @@ public class TPIDbContext : IdentityDbContext<User>
 
     public DbSet<Test> Tests { get; set; }
 
+    public DbSet<User> Users { get; set; }
+
 }
 
