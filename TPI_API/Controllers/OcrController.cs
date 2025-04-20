@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using TPI_API.Services;
+using TPI_API.Interfaces;
 
 namespace TPI_API.Controllers;
 [Route("api/[controller]")]

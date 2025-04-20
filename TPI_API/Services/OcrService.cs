@@ -1,118 +1,56 @@
 
-using PdfiumViewer;
-using System.Drawing;
-using System.Runtime.InteropServices;
 using System.Text;
 using Tesseract;
+using TPI_API.Dtos.OCR;
+using TPI_API.Interfaces;
 
 namespace TPI_API.Services;
 
 public class OcrService : IOcrService
 {
-    static OcrService()
+    private readonly IDocumentProcessingService _documentProcessingService;
+
+    public OcrService(IDocumentProcessingService documentProcessingService)
     {
-        try
-        {
-            // Intentar cargar la biblioteca nativa desde el paquete NuGet
-            // El paquete PdfiumViewer.Native.x86_64.v8-xfa debería proporcionar la DLL
-            // en la ubicación correcta automáticamente
-            
-            // Verificar si existe la DLL en la ubicación esperada
-            string pdfiumPath = Path.Combine(AppContext.BaseDirectory, "NativeBinaries", "x64", "pdfium.dll");
-            if (!File.Exists(pdfiumPath))
-            {
-                // Buscar en ubicaciones alternativas
-                string nugetPath = Path.Combine(AppContext.BaseDirectory, "runtimes", "win-x64", "native", "pdfium.dll");
-                if (File.Exists(nugetPath))
-                {
-                    // Crear directorio si no existe
-                    Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "NativeBinaries", "x64"));
-                    // Copiar el archivo a la ubicación esperada
-                    File.Copy(nugetPath, pdfiumPath, true);
-                    Console.WriteLine($"Archivo pdfium.dll copiado desde {nugetPath} a {pdfiumPath}");
-                }
-                else
-                {
-                    Console.WriteLine($"No se encontró el archivo pdfium.dll en ninguna ubicación conocida");
-                }
-            }
-            
-            // Cargar la biblioteca manualmente
-            if (File.Exists(pdfiumPath))
-            {
-                IntPtr handle = LoadLibrary(pdfiumPath);
-                if (handle == IntPtr.Zero)
-                {
-                    Console.WriteLine($"Error al cargar pdfium.dll: {Marshal.GetLastWin32Error()}");
-                }
-                else
-                {
-                    Console.WriteLine("Biblioteca pdfium.dll cargada correctamente");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error al inicializar PdfiumViewer: {ex.Message}");
-        }
+        _documentProcessingService = documentProcessingService;
     }
 
-    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    private static extern IntPtr LoadLibrary(string libname);
-
-    /// <summary>
-    /// Procesa un archivo PDF utilizando OCR para extraer texto
-    /// </summary>
-    /// <param name="file">Archivo PDF a procesar</param>
-    /// <returns>Resultado del procesamiento OCR con texto extraído y metadatos</returns>
-    public async Task<OcrResult> ProcessPdfAsync(IFormFile file)
+    public async Task<OcrResultDto> ProcessPdfAsync(IFormFile file)
     {
         if (file == null || file.Length == 0)
             throw new ArgumentException("No se ha proporcionado un archivo PDF.");
 
-        var tessDataPath = GetTessdataPath();
+        var tessDataPath = TessdataPath;
         if (tessDataPath == null || !Directory.Exists(tessDataPath))
             throw new DirectoryNotFoundException($"No se encontró el directorio 'tessdata' en: {tessDataPath}");
 
-        string tempPdfPath = Path.GetTempFileName();
-        var extractedText = new StringBuilder();
-        var result = new OcrResult();
+        var result = new OcrResultDto();
 
         try
         {
-            // Guardar archivo temporalmente
-            using (var fs = new FileStream(tempPdfPath, FileMode.Create))
-                await file.CopyToAsync(fs);
-
-            using var document = PdfDocument.Load(tempPdfPath);
+            // Utilizar el servicio de procesamiento de documentos para preparar el PDF
+            var processedDocument = await _documentProcessingService.ProcessPdfDocumentAsync(file);
+            
             using var engine = new TesseractEngine(tessDataPath, "spa", EngineMode.Default);
 
             var startTime = DateTime.Now;
-            var pageResults = new List<OcrPageResult>();
+            var pageResults = new List<OcrPageResultDto>();
             int totalCharacters = 0;
             int totalWords = 0;
+            var extractedText = new StringBuilder();
 
-            for (int i = 0; i < document.PageCount; i++)
+            // Configurar parámetros de Tesseract para mejorar la precisión
+            engine.SetVariable("tessedit_char_whitelist", @"abcdefghijklmnñopqrstuvwxyzABCDEFGHIJKLMNÑOPQRSTUVWXYZ0123456789.,;:()[]{}¡!¿?@#$%&*+-/\\<>=_áéíóúÁÉÍÓÚüÜ ");
+            engine.SetVariable("language_model_penalty_non_dict_word", "0.5");
+            engine.SetVariable("language_model_penalty_non_freq_dict_word", "0.5");
+
+            foreach (var processedPage in processedDocument.ProcessedPages)
             {
-                using var bmp = (Bitmap)document.Render(i, 300, 300, true);
-                
-                // Aplicar técnicas de preprocesamiento para mejorar la calidad de la imagen
-                using var processedBmp = PreprocessImage(bmp);
-
-                using var ms = new MemoryStream();
-                processedBmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-                ms.Position = 0;
-
+                using var ms = new MemoryStream(processedPage.ProcessedImageData);
                 using var img = Pix.LoadFromMemory(ms.ToArray());
                 
-                // Configurar parámetros de Tesseract para mejorar la precisión
                 using var page = engine.Process(img, PageSegMode.Auto);
                 
-                // Aplicar configuraciones adicionales para mejorar la precisión
-                page.SetVariable("tessedit_char_whitelist", "abcdefghijklmnñopqrstuvwxyzABCDEFGHIJKLMNÑOPQRSTUVWXYZ0123456789.,;:()[]{}¡!¿?@#$%&*+-/\\"'<>=_áéíóúÁÉÍÓÚüÜ ");
-                page.SetVariable("language_model_penalty_non_dict_word", "0.5");
-                page.SetVariable("language_model_penalty_non_freq_dict_word", "0.5");
-
                 string pageText = page.GetText();
                 
                 // Aplicar correcciones post-OCR para mejorar la calidad del texto
@@ -125,9 +63,9 @@ public class OcrService : IOcrService
                 totalCharacters += pageCharCount;
                 totalWords += pageWordCount;
 
-                var pageResult = new OcrPageResult
+                var pageResult = new OcrPageResultDto
                 {
-                    Number = i + 1,
+                    Number = processedPage.PageNumber,
                     Text = pageText,
                     Confidence = Math.Round(confidence, 2),
                     Characters = pageCharCount,
@@ -136,7 +74,7 @@ public class OcrService : IOcrService
 
                 pageResults.Add(pageResult);
 
-                extractedText.AppendLine($"--- Página {i + 1} ---");
+                extractedText.AppendLine($"--- Página {processedPage.PageNumber} ---");
                 extractedText.AppendLine(pageText);
                 extractedText.AppendLine();
             }
@@ -146,18 +84,18 @@ public class OcrService : IOcrService
             // Construir el resultado
             result.Status = "Success";
             result.Message = "PDF procesado correctamente con Tesseract OCR.";
-            result.Metadata = new OcrMetadata
+            result.Metadata = new OcrMetadataDto
             {
                 FileName = file.FileName,
-                FileSize = $"{Math.Round(file.Length / 1024.0, 2)} KB",
-                TotalPages = document.PageCount,
+                FileSize = processedDocument.FileSize,
+                TotalPages = processedDocument.PageCount,
                 ProcessingTime = $"{Math.Round(processingTime, 2)} seg.",
-                Statistics = new OcrStatistics
+                Statistics = new OcrStatisticsDto
                 {
                     TotalCharacters = totalCharacters,
                     TotalWords = totalWords,
-                    AverageCharactersPerPage = Math.Round((double)totalCharacters / document.PageCount, 2),
-                    AverageWordsPerPage = Math.Round((double)totalWords / document.PageCount, 2)
+                    AverageCharactersPerPage = Math.Round((double)totalCharacters / processedDocument.PageCount, 2),
+                    AverageWordsPerPage = Math.Round((double)totalWords / processedDocument.PageCount, 2)
                 }
             };
             result.Pages = pageResults;
@@ -169,184 +107,35 @@ public class OcrService : IOcrService
         {
             throw new Exception($"Error al procesar OCR: {ex.Message}", ex);
         }
-        finally
-        {
-            // Siempre eliminamos el archivo temporal
-            try {File.Delete(tempPdfPath); } catch { /* opcional: log */ }
-        }
     }
 
     /// <summary>
-    /// Aplica técnicas de preprocesamiento a la imagen para mejorar la calidad del OCR
+    /// Obtiene la ruta al directorio tessdata que contiene los datos de entrenamiento
     /// </summary>
-    /// <param name="originalImage">Imagen original a procesar</param>
-    /// <returns>Imagen procesada con mejor calidad para OCR</returns>
-    private Bitmap PreprocessImage(Bitmap originalImage)
+    /// <returns>Ruta al directorio tessdata o null si no se encuentra</returns>
+    public string? TessdataPath
     {
-        try
+        get
         {
-            // Crear una copia de la imagen original para no modificarla
-            Bitmap processedImage = new Bitmap(originalImage);
-            
-            // Aplicar técnicas de preprocesamiento usando System.Drawing
-            using (Graphics g = Graphics.FromImage(processedImage))
+            string? currentPath = AppContext.BaseDirectory;
+            for (int i = 0; i < 5 && currentPath != null; i++)
             {
-                // Configuración para mejor calidad
-                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
-                g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+                var parent = Directory.GetParent(currentPath);
+                if (parent == null) break;
+
+                var tessPath = Path.Combine(parent.FullName, "TPI_API", "tessdata");
+                if (Directory.Exists(tessPath))
+                    return tessPath;
+
+                currentPath = parent.FullName;
             }
-            
-            // Aplicar filtros para mejorar la imagen
-            processedImage = AdjustContrast(processedImage, 1.5f); // Aumentar contraste
-            processedImage = RemoveNoise(processedImage);          // Reducir ruido
-            processedImage = Binarize(processedImage);             // Binarización adaptativa
-            processedImage = DeskewImage(processedImage);          // Corregir inclinación
-            
-            return processedImage;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error en el preprocesamiento de imagen: {ex.Message}");
-            // En caso de error, devolver la imagen original
-            return originalImage;
+
+            // Fallback al directorio de salida
+            var fallbackPath = Path.Combine(AppContext.BaseDirectory, "tessdata");
+            return Directory.Exists(fallbackPath) ? fallbackPath : null;
         }
     }
-    
-    /// <summary>
-    /// Ajusta el contraste de la imagen
-    /// </summary>
-    private Bitmap AdjustContrast(Bitmap image, float factor)
-    {
-        Bitmap adjustedImage = new Bitmap(image.Width, image.Height);
-        
-        // Matriz de color para ajustar contraste
-        float[][] colorMatrixElements = {
-            new float[] {factor, 0, 0, 0, 0},
-            new float[] {0, factor, 0, 0, 0},
-            new float[] {0, 0, factor, 0, 0},
-            new float[] {0, 0, 0, 1, 0},
-            new float[] {-0.1f, -0.1f, -0.1f, 0, 1}
-        };
-        
-        using (var attributes = new System.Drawing.Imaging.ImageAttributes())
-        {
-            attributes.SetColorMatrix(new System.Drawing.Imaging.ColorMatrix(colorMatrixElements));
-            
-            using (var g = Graphics.FromImage(adjustedImage))
-            {
-                g.DrawImage(image, new Rectangle(0, 0, image.Width, image.Height),
-                    0, 0, image.Width, image.Height, GraphicsUnit.Pixel, attributes);
-            }
-        }
-        
-        return adjustedImage;
-    }
-    
-    /// <summary>
-    /// Elimina ruido de la imagen usando un filtro de mediana
-    /// </summary>
-    private Bitmap RemoveNoise(Bitmap image)
-    {
-        // Implementación simplificada de reducción de ruido
-        // Para una implementación completa, se recomienda usar bibliotecas especializadas
-        Bitmap result = new Bitmap(image.Width, image.Height);
-        
-        // Aplicar un suavizado básico
-        using (var g = Graphics.FromImage(result))
-        {
-            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-            g.DrawImage(image, new Rectangle(0, 0, image.Width, image.Height));
-        }
-        
-        return result;
-    }
-    
-    /// <summary>
-    /// Aplica binarización adaptativa a la imagen
-    /// </summary>
-    private Bitmap Binarize(Bitmap image)
-    {
-        try
-        {
-            // Crear una copia de la imagen
-            Bitmap result = new Bitmap(image.Width, image.Height);
-            
-            // Bloquear los bits de la imagen para acceso más rápido
-            System.Drawing.Imaging.BitmapData sourceData = image.LockBits(
-                new Rectangle(0, 0, image.Width, image.Height),
-                System.Drawing.Imaging.ImageLockMode.ReadOnly,
-                System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-            
-            System.Drawing.Imaging.BitmapData resultData = result.LockBits(
-                new Rectangle(0, 0, result.Width, result.Height),
-                System.Drawing.Imaging.ImageLockMode.WriteOnly,
-                System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-            
-            // Umbral para binarización (ajustar según necesidad)
-            int threshold = 180;
-            
-            // Procesar la imagen usando punteros para mayor velocidad
-            unsafe
-            {
-                byte* sourcePtr = (byte*)sourceData.Scan0;
-                byte* resultPtr = (byte*)resultData.Scan0;
-                
-                int sourceStride = sourceData.Stride;
-                int resultStride = resultData.Stride;
-                
-                for (int y = 0; y < image.Height; y++)
-                {
-                    for (int x = 0; x < image.Width; x++)
-                    {
-                        // Calcular la posición del píxel actual
-                        int position = y * sourceStride + x * 4;
-                        
-                        // Obtener los valores RGB
-                        byte blue = sourcePtr[position];
-                        byte green = sourcePtr[position + 1];
-                        byte red = sourcePtr[position + 2];
-                        
-                        // Calcular el valor de escala de grises
-                        int grayScale = (int)((red * 0.3) + (green * 0.59) + (blue * 0.11));
-                        
-                        // Aplicar umbral
-                        byte pixelValue = (byte)(grayScale > threshold ? 255 : 0);
-                        
-                        // Establecer el valor en la imagen de resultado
-                        resultPtr[position] = pixelValue;     // Blue
-                        resultPtr[position + 1] = pixelValue; // Green
-                        resultPtr[position + 2] = pixelValue; // Red
-                        resultPtr[position + 3] = 255;        // Alpha (opaco)
-                    }
-                }
-            }
-            
-            // Desbloquear los bits
-            image.UnlockBits(sourceData);
-            result.UnlockBits(resultData);
-            
-            return result;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error en la binarización: {ex.Message}");
-            return image; // Devolver imagen original en caso de error
-        }
-    }
-    
-    /// <summary>
-    /// Corrige la inclinación de la imagen
-    /// </summary>
-    private Bitmap DeskewImage(Bitmap image)
-    {
-        // Nota: Una implementación completa de corrección de sesgo requiere algoritmos complejos
-        // Esta es una implementación simplificada que devuelve la imagen original
-        // Para una implementación real, considere usar bibliotecas como EmguCV o AForge.NET
-        return new Bitmap(image);
-    }
-    
+
     /// <summary>
     /// Aplica correcciones post-OCR al texto extraído
     /// </summary>
@@ -359,34 +148,120 @@ public class OcrService : IOcrService
             
         try
         {
-            // 1. Corregir errores comunes de OCR
+            // 1. Corregir errores comunes de OCR con un diccionario ampliado
             var corrections = new Dictionary<string, string>
             {
                 // Caracteres confundidos frecuentemente
-                { "0", "O" }, { "l", "I" }, { "1", "l" },
+                { "0", "O" }, { "l", "I" }, { "1", "l" }, { "5", "S" }, { "8", "B" },
+                { "rn", "m" }, { "cl", "d" }, { "vv", "w" }, { "nn", "m" },
+                
                 // Errores comunes en español
                 { "a", "á" }, { "e", "é" }, { "i", "í" }, { "o", "ó" }, { "u", "ú" },
+                { "n~", "ñ" }, { "n-", "ñ" },
+                
                 // Símbolos mal interpretados
-                { "'", "\"" }, { "`", "'" }, { "—", "-" }
+                { "'", "\"" }, { "`", "'" }, { "—", "-" }, { "'", "'" }
             };
             
+            // Aplicar correcciones de caracteres
+            foreach (var correction in corrections)
+            {
+                text = text.Replace(correction.Key, correction.Value);
+            }
+            
             // 2. Corregir palabras cortadas por saltos de línea
-            text = System.Text.RegularExpressions.Regex.Replace(text, "(\w+)-\s*\n(\w+)", "$1$2");
+            text = System.Text.RegularExpressions.Regex.Replace(text, @"(\w+)-\s*\n(\w+)", "$1$2");
             
             // 3. Eliminar caracteres extraños o ruido
-            text = System.Text.RegularExpressions.Regex.Replace(text, "[^\w\s.,;:()\[\]{}¡!¿?@#$%&*+\-/\\\"'<>=_áéíóúÁÉÍÓÚüÜ]", "");
+            text = System.Text.RegularExpressions.Regex.Replace(text, @"[^\w\s.,;:()\[\]{}¡!¿?@#$%&*+\-/\\<>=_áéíóúÁÉÍÓÚüÜñÑ]", "");
             
             // 4. Normalizar espacios múltiples
-            text = System.Text.RegularExpressions.Regex.Replace(text, "\s+", " ");
+            text = System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ");
             
             // 5. Corregir espacios antes de signos de puntuación
-            text = System.Text.RegularExpressions.Regex.Replace(text, "\s+([.,;:!?])", "$1");
+            text = System.Text.RegularExpressions.Regex.Replace(text, @"\s+([.,;:!?])", "$1");
+            
+            // 6. Corregir palabras comunes mal reconocidas en español
+            var commonWordCorrections = new Dictionary<string, string>
+            {
+                { "cornprar", "comprar" }, { "cornpra", "compra" },
+                { "rnás", "más" }, { "rnenos", "menos" },
+                { "rnucho", "mucho" }, { "rnuy", "muy" },
+                { "tarnbién", "también" }, { "tarnpoco", "tampoco" },
+                { "siernpre", "siempre" }, { "tiernpo", "tiempo" },
+                { "ejernplo", "ejemplo" }, { "nurnero", "numero" },
+                { "prirnero", "primero" }, { "últirno", "último" },
+                { "inforrne", "informe" }, { "infornación", "información" }
+            };
+            
+            // Aplicar correcciones de palabras comunes
+            foreach (var correction in commonWordCorrections)
+            {
+                text = System.Text.RegularExpressions.Regex.Replace(text, 
+                    $"\\b{correction.Key}\\b", correction.Value, 
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            }
+            
+            // 7. Validar y corregir palabras con baja confianza usando un enfoque contextual
+            text = CorrectLowConfidenceWords(text);
             
             return text;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error en el post-procesamiento de texto: {ex.Message}");
+            return text; // Devolver texto original en caso de error
+        }
+    }
+    
+    /// <summary>
+    /// Corrige palabras con baja confianza usando análisis contextual
+    /// </summary>
+    private string CorrectLowConfidenceWords(string text)
+    {
+        try
+        {
+            // Dividir el texto en palabras
+            string[] words = text.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            
+            // Diccionario de palabras comunes en español para validación
+            var commonSpanishWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "el", "la", "los", "las", "un", "una", "unos", "unas",
+                "y", "o", "pero", "porque", "como", "cuando", "donde", "si",
+                "de", "en", "por", "para", "con", "sin", "sobre", "bajo",
+                "que", "quien", "cuyo", "cual", "cuales", "cuanta", "cuantos",
+                "este", "esta", "estos", "estas", "ese", "esa", "esos", "esas",
+                "ser", "estar", "haber", "tener", "hacer", "poder", "decir", "ir",
+                "más", "menos", "mucho", "poco", "grande", "pequeño", "alto", "bajo",
+                "bueno", "malo", "mejor", "peor", "primero", "último", "nuevo", "viejo"
+            };
+            
+            // Patrones de corrección basados en reglas contextuales
+            var contextualPatterns = new Dictionary<string, string>
+            {
+                { @"\b(de|en|con|por|para)\s+e\b", "$1 el" },
+                { @"\b(de|en|con|por|para)\s+l\b", "$1 la" },
+                { @"\ba\s+e\b", "a el" },
+                { @"\bpor\s+e\b", "por el" },
+                { @"\bcon\s+e\b", "con el" },
+                { @"\bde\s+e\b", "de el" },
+                { @"\ben\s+e\b", "en el" }
+            };
+            
+            // Aplicar patrones contextuales
+            foreach (var pattern in contextualPatterns)
+            {
+                text = System.Text.RegularExpressions.Regex.Replace(text, 
+                    pattern.Key, pattern.Value, 
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            }
+            
+            return text;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error en la corrección de palabras con baja confianza: {ex.Message}");
             return text; // Devolver texto original en caso de error
         }
     }

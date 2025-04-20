@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using TPI_API.Context;
+using TPI_API.Interfaces;
 using TPI_API.Models;
 using TPI_API.Seeders;
 using TPI_API.Senders;
@@ -14,6 +15,7 @@ Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add services to the container.
 var connectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING") ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
 builder.Services.AddDbContext<TPIDbContext>(options => options.UseSqlServer(connectionString));
@@ -59,6 +61,7 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddTransient<IEmailSender<User>, NoOpEmailSender<User>>();
+builder.Services.AddScoped<IDocumentProcessingService, DocumentProcessingService>();
 builder.Services.AddScoped<IOcrService, OcrService>();
 
 //CORS
