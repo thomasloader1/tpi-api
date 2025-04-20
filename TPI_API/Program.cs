@@ -8,6 +8,7 @@ using TPI_API.Context;
 using TPI_API.Models;
 using TPI_API.Seeders;
 using TPI_API.Senders;
+using TPI_API.Services;
 
 Env.Load();
 
@@ -58,6 +59,7 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddTransient<IEmailSender<User>, NoOpEmailSender<User>>();
+builder.Services.AddScoped<IOcrService, OcrService>();
 
 //CORS
 var frontURL = Environment.GetEnvironmentVariable("FRONT_URL");
@@ -69,7 +71,7 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(frontURL) 
               .AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowCredentials(); // Solo si usás cookies o auth por header
+              .AllowCredentials(); // Solo si usï¿½s cookies o auth por header
     });
 });
 
