@@ -12,10 +12,6 @@ public class DocumentProcessingService : IDocumentProcessingService
     {
         try
         {
-            // Intentar cargar la biblioteca nativa desde el paquete NuGet
-            // El paquete PdfiumViewer.Native.x86_64.v8-xfa debería proporcionar la DLL
-            // en la ubicación correcta automáticamente
-            
             // Verificar si existe la DLL en la ubicación esperada
             string pdfiumPath = Path.Combine(AppContext.BaseDirectory, "NativeBinaries", "x64", "pdfium.dll");
             if (!File.Exists(pdfiumPath))
