@@ -6,9 +6,9 @@ using TPI_API.Models;
 [Route("api/[controller]")]
 public class TareaController : ControllerBase
 {
-    private readonly ITareaService _tareaService;
+    private readonly IOrderService _tareaService;
 
-    public TareaController(ITareaService tareaService)
+    public TareaController(IOrderService tareaService)
     {
         _tareaService = tareaService;
     }
@@ -35,7 +35,7 @@ public class TareaController : ControllerBase
 
     // Crear una nueva tarea
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] Tarea tarea)
+    public async Task<IActionResult> Create([FromBody] TPI_API.Models.Order tarea)
     {
         if (!ModelState.IsValid)
         {
@@ -47,7 +47,7 @@ public class TareaController : ControllerBase
 
     // Actualizar una tarea existente
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, [FromBody] Tarea tarea)
+    public async Task<IActionResult> Update(int id, [FromBody] TPI_API.Models.Order tarea)
     {
         if (id != tarea.Id)
         {

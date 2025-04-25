@@ -48,18 +48,31 @@ public class OcrService : IOcrService
             {
                 using var ms = new MemoryStream(processedPage.ProcessedImageData);
                 using var img = Pix.LoadFromMemory(ms.ToArray());
-                
                 using var page = engine.Process(img, PageSegMode.Auto);
-                
                 string pageText = page.GetText();
-                
                 // Aplicar correcciones post-OCR para mejorar la calidad del texto
                 pageText = PostProcessText(pageText);
-                
                 float confidence = page.GetMeanConfidence() * 100;
                 int pageCharCount = pageText.Length;
                 int pageWordCount = pageText.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
-                
+
+                // Persistir la imagen si el texto extraído es vacío
+                if (string.IsNullOrWhiteSpace(pageText))
+                {
+                    try
+                    {
+                        var persistDir = Path.Combine(AppContext.BaseDirectory, "FailedOcrCaptures");
+                        Directory.CreateDirectory(persistDir);
+                        var fileName = $"{Path.GetFileNameWithoutExtension(file.FileName)}_page{processedPage.PageNumber}_{DateTime.Now:yyyyMMddHHmmssfff}.png";
+                        var filePath = Path.Combine(persistDir, fileName);
+                        await File.WriteAllBytesAsync(filePath, processedPage.ProcessedImageData);
+                        Console.WriteLine($"[OCR] Imagen persistida por texto vacío: {filePath}");
+                    }
+                    catch (Exception persistEx)
+                    {
+                        Console.WriteLine($"[OCR] Error al persistir imagen de página sin texto: {persistEx.Message}");
+                    }
+                }
                 totalCharacters += pageCharCount;
                 totalWords += pageWordCount;
 

@@ -64,8 +64,8 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddTransient<IEmailSender<User>, NoOpEmailSender<User>>();
 builder.Services.AddScoped<IDocumentProcessingService, DocumentProcessingService>();
 builder.Services.AddScoped<IOcrService, OcrService>();
-builder.Services.AddScoped<ITareaService, TareaService>();
-builder.Services.AddScoped<ITareaRepository, TareaRepository>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 
 //CORS
 var frontURL = Environment.GetEnvironmentVariable("FRONT_URL");
