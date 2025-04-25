@@ -11,5 +11,7 @@ public class TPIDbContext : IdentityDbContext<User>
 
     public DbSet<User> Users { get; set; }
 
+    public DbSet<Tarea> Tareas { get; set; }
+
 }
 

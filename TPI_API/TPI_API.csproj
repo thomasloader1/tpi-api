@@ -18,6 +18,7 @@
     <PackageReference Include="DotNetEnv" Version="3.1.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.15" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.15" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.11" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.15" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.15">
       <PrivateAssets>all</PrivateAssets>
@@ -30,10 +31,11 @@
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="8.0.15" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.7" />
     <PackageReference Include="PdfiumViewer" Version="2.13.0" />
     <PackageReference Include="PdfiumViewer.Native.x86_64.v8-xfa" Version="8.0.191.0" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.7" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
     <PackageReference Include="System.Drawing.Common" Version="9.0.4" />
     <PackageReference Include="Tesseract" Version="5.2.0" />
   </ItemGroup>
@@ -42,10 +44,6 @@
     <Content Include="NativeBinaries\x64\pdfium.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="tessdata\" />
   </ItemGroup>
 
 </Project>

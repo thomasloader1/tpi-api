@@ -13,7 +13,7 @@ public class OcrController : ControllerBase
         _ocrService = ocrService;
     }
     [HttpPost("process")]
-    public async Task<IActionResult> ProcessPdf([FromForm] IFormFile file)
+    public async Task<IActionResult> ProcessPdf([FromBody] IFormFile file)
     {
         if (file == null || file.Length == 0)
             return BadRequest("No se ha proporcionado un archivo PDF.");

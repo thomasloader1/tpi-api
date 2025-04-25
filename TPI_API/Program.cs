@@ -7,6 +7,7 @@ using System.Text;
 using TPI_API.Context;
 using TPI_API.Interfaces;
 using TPI_API.Models;
+using TPI_API.Repositories;
 using TPI_API.Seeders;
 using TPI_API.Senders;
 using TPI_API.Services;
@@ -63,6 +64,8 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddTransient<IEmailSender<User>, NoOpEmailSender<User>>();
 builder.Services.AddScoped<IDocumentProcessingService, DocumentProcessingService>();
 builder.Services.AddScoped<IOcrService, OcrService>();
+builder.Services.AddScoped<ITareaService, TareaService>();
+builder.Services.AddScoped<ITareaRepository, TareaRepository>();
 
 //CORS
 var frontURL = Environment.GetEnvironmentVariable("FRONT_URL");
