@@ -41,5 +41,14 @@ public class OrderService : IOrderService
         await _tareaRepository.DeleteAsync(id);
     }
 
-   
+    public Task<string> GuardarArchivo(IFormFile file, string carpetaDestino)
+    {
+        // Guardar un archivo en una carpeta específica
+        string filePath = Path.Combine(carpetaDestino, file.FileName);
+        using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            file.CopyTo(stream);
+        }
+        return Task.FromResult(filePath);
+    }
 }

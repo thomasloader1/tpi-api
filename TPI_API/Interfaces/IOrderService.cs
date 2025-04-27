@@ -9,4 +9,6 @@ public interface IOrderService
     Task CrearAsync(Order tarea);
     Task ActualizarAsync(Order tarea);
     Task EliminarAsync(int id);
+
+    Task<string> GuardarArchivo(IFormFile file, string carpetaDestino);
 }

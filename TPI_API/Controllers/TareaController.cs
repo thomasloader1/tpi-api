@@ -64,4 +64,19 @@ public class TareaController : ControllerBase
         await _tareaService.EliminarAsync(id);
         return NoContent();
     }
+
+    // Guardar un archivo en la carpeta Uploads, recibiendolo con un post
+    [HttpPost("upload")]
+    public async Task<IActionResult> UploadFile(IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest("No se ha proporcionado un archivo.");
+        }
+
+        string carpetaDestino = Path.Combine(Directory.GetCurrentDirectory(), "Uploads");
+        string resultado = await _tareaService.GuardarArchivo(file, carpetaDestino);
+        return Ok(resultado);
+    }
+
 }
