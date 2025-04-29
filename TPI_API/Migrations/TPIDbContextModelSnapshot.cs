@@ -155,7 +155,7 @@ namespace TPI_API.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("TPI_API.Models.Tarea", b =>
+            modelBuilder.Entity("TPI_API.Models.Order", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -177,11 +177,14 @@ namespace TPI_API.Migrations
                     b.Property<DateTime?>("FechaLimite")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("FilePath")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("UsuarioId")
+                    b.Property<int?>("UsuarioId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");

@@ -23,16 +23,16 @@ public class OrderService : IOrderService
         return await _tareaRepository.GetByIdAsync(id);
     }
 
-    public async Task CrearAsync(Order tarea)
+    public async Task CrearAsync(Order tarea, string path)
     {
         // Agregar una nueva tarea al repositorio
-        await _tareaRepository.AddAsync(tarea);
+        await _tareaRepository.AddAsync(tarea, path);
     }
 
-    public async Task ActualizarAsync(Order tarea)
+    public async Task ActualizarAsync(Order tarea, string path)
     {
         // Actualizar una tarea existente
-        await _tareaRepository.UpdateAsync(tarea);
+        await _tareaRepository.UpdateAsync(tarea, path);
     }
 
     public async Task EliminarAsync(int id)
@@ -49,6 +49,24 @@ public class OrderService : IOrderService
         {
             file.CopyTo(stream);
         }
+        // Guardar la ruta del archivo en la base de datos
+        var tarea = new Order
+        {
+            FilePath = filePath
+        };
+
         return Task.FromResult(filePath);
+    }
+
+    public Task<string> ObtenerArchivoDesdeBaseDeDatos(string id)
+    {
+        //obtener el archivo desde el tarea repository
+        var tarea = _tareaRepository.GetByIdAsync(int.Parse(id));
+        if (tarea != null)
+        {
+            return Task.FromResult(tarea.Result.FilePath);
+        }
+        return Task.FromResult(string.Empty);
+
     }
 }

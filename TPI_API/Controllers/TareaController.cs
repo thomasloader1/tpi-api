@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.IO;
+using Microsoft.AspNetCore.Mvc;
 using TPI_API.Interfaces;
 using TPI_API.Models;
 
@@ -33,27 +34,40 @@ public class TareaController : ControllerBase
         return Ok(tarea);
     }
 
-    // Crear una nueva tarea
+    // Update the Create method to correctly handle the return type of UploadFile
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] TPI_API.Models.Order tarea)
+    public async Task<IActionResult> Create([FromForm] TPI_API.Models.Order tarea, IFormFile file)
     {
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
         }
-        await _tareaService.CrearAsync(tarea);
+
+        string path = UploadFile(file).Result.ToString();
+
+        await _tareaService.CrearAsync(tarea,path);
+
         return CreatedAtAction(nameof(GetById), new { id = tarea.Id }, tarea);
     }
 
     // Actualizar una tarea existente
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, [FromBody] TPI_API.Models.Order tarea)
+    public async Task<IActionResult> Update(int id, [FromForm] TPI_API.Models.Order tarea, IFormFile? file)
     {
         if (id != tarea.Id)
         {
             return BadRequest("El ID proporcionado no coincide con el ID de la tarea.");
         }
-        await _tareaService.ActualizarAsync(tarea);
+
+        var path = _tareaService.ObtenerPorIdAsync(id).Result.FilePath;
+
+        // verificar que file no sea vacio
+        if (file != null || file.Length != 0)
+        {
+            path = UploadFile(file).Result.ToString();
+        }
+
+        await _tareaService.ActualizarAsync(tarea, path);
         return NoContent(); // Indica que la operación fue exitosa pero no devuelve contenido
     }
 
@@ -77,6 +91,24 @@ public class TareaController : ControllerBase
         string carpetaDestino = Path.Combine(Directory.GetCurrentDirectory(), "Uploads");
         string resultado = await _tareaService.GuardarArchivo(file, carpetaDestino);
         return Ok(resultado);
+    }
+
+    //Obtener el archivo id desde la carpeta Uploads, recibiendolo con un get.
+    [HttpGet("download/{id}")]
+    public IActionResult DownloadFile(int idtarea)
+    {
+        string carpetaDestino = Path.Combine(Directory.GetCurrentDirectory(), "Uploads");
+
+        // obtener la tarea por id
+        var tarea = _tareaService.ObtenerPorIdAsync(idtarea).Result;
+
+        string filePath = tarea.FilePath;
+        if (!System.IO.File.Exists(filePath))
+        {
+            return NotFound("El archivo no existe.");
+        }
+        var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+        return File(fileStream, "application/octet-stream", true);
     }
 
 }

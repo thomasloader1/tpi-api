@@ -11,6 +11,6 @@ public class Order
     public string Estado { get; set; }
     public DateTime FechaCreacion { get; set; }
     public DateTime? FechaLimite { get; set; }
-    public int UsuarioId { get; set; } 
-
+    public int? UsuarioId { get; set; }
+    public string? FilePath { get; internal set; }
 }

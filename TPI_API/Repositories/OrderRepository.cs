@@ -26,19 +26,49 @@ public class OrderRepository : IOrderRepository
         return await _context.Tareas.FindAsync(id);
     }
 
-    public async Task AddAsync(Order tarea)
+
+public async Task AddAsync(Order tarea, string path)
     {
-        // Agrega una nueva tarea y guarda los cambios
-        await _context.Tareas.AddAsync(tarea);
+        // Crear una nueva instancia copiando las propiedades
+        var nuevaTarea = new Order
+        {
+            Nombre = tarea.Nombre,
+            Descripcion = tarea.Descripcion,
+            Estado = tarea.Estado,
+            FechaCreacion = DateTime.Now,
+            FechaLimite = tarea.FechaLimite,
+            UsuarioId = tarea.UsuarioId,
+            FilePath = path // Seteás solo el path acá
+        };
+
+        await _context.Tareas.AddAsync(nuevaTarea);
         await _context.SaveChangesAsync();
     }
 
-    public async Task UpdateAsync(Order tarea)
+
+    public async Task UpdateAsync(Order tarea, string path)
     {
-        // Actualiza una tarea existente
-        _context.Tareas.Update(tarea);
+        // Buscar la tarea original en la base de datos
+        var tareaExistente = await _context.Tareas.FindAsync(tarea.Id);
+
+        if (tareaExistente == null)
+            throw new Exception("Tarea no encontrada.");
+
+        // Actualizá los campos que necesites
+        tareaExistente.Nombre = tarea.Nombre;
+        tareaExistente.Descripcion = tarea.Descripcion;
+        tareaExistente.Estado = tarea.Estado;
+        tareaExistente.FechaCreacion = tarea.FechaCreacion;
+        tareaExistente.FechaLimite = tarea.FechaLimite;
+        tareaExistente.UsuarioId = tarea.UsuarioId;
+
+        // Asigná el nuevo FilePath
+        typeof(Order).GetProperty("FilePath")!
+                     .SetValue(tareaExistente, path);
+
         await _context.SaveChangesAsync();
     }
+
 
     public async Task DeleteAsync(int id)
     {
@@ -50,4 +80,6 @@ public class OrderRepository : IOrderRepository
             await _context.SaveChangesAsync();
         }
     }
+
+
 }
