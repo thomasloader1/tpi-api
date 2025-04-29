@@ -43,7 +43,7 @@ public class TareaController : ControllerBase
             return BadRequest(ModelState);
         }
 
-        string path = UploadFile(file).Result.ToString();
+        string path = await ObtenerResultadoOk(UploadFile(file));
 
         await _tareaService.CrearAsync(tarea,path);
 
@@ -59,13 +59,13 @@ public class TareaController : ControllerBase
             return BadRequest("El ID proporcionado no coincide con el ID de la tarea.");
         }
 
-        var path = _tareaService.ObtenerPorIdAsync(id).Result.FilePath;
+        var path = (await _tareaService.ObtenerPorIdAsync(id)).FilePath;
 
-        // verificar que file no sea vacio
-        if (file != null || file.Length != 0)
+        if (file != null && file.Length != 0)
         {
-            path = UploadFile(file).Result.ToString();
+            path = await ObtenerResultadoOk(UploadFile(file));
         }
+
 
         await _tareaService.ActualizarAsync(tarea, path);
         return NoContent(); // Indica que la operación fue exitosa pero no devuelve contenido
@@ -80,8 +80,7 @@ public class TareaController : ControllerBase
     }
 
     // Guardar un archivo en la carpeta Uploads, recibiendolo con un post
-    [HttpPost("upload")]
-    public async Task<IActionResult> UploadFile(IFormFile file)
+    private async Task<IActionResult> UploadFile(IFormFile file)
     {
         if (file == null || file.Length == 0)
         {
@@ -108,7 +107,23 @@ public class TareaController : ControllerBase
             return NotFound("El archivo no existe.");
         }
         var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-        return File(fileStream, "application/octet-stream", true);
+        var fileName = Path.GetFileName(filePath);
+        return File(fileStream, "application/octet-stream", fileName);
     }
+
+    private async Task<string?> ObtenerResultadoOk(Task<IActionResult> accion)
+{
+    var result = await accion;
+    
+    if (result is OkObjectResult okResult)
+    {
+        return okResult.Value?.ToString();
+    }
+
+    return null; // o lanzar una excepción si preferís
+}
+
+
+
 
 }
