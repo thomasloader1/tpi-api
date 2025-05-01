@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using TPI_API.Dtos.User;
+using TPI_API.Interfaces;
 using TPI_API.Models;
 
 namespace TPI_API.Controllers;
@@ -10,44 +12,28 @@ namespace TPI_API.Controllers;
 [Route("api/[controller]")]
 public class UserController : ControllerBase
 {
-    private readonly UserManager<User> _userManager;
+    private readonly IUserService _userService;
 
-    public UserController(UserManager<User> userManager)
+    public UserController(IUserService userService)
     {
-        _userManager = userManager;
+        _userService = userService;
 
     }
 
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetUserById(string id)
-    {
-        /*var user = await _userManager.FindByIdAsync(id);
-
-        if (user == null)
-        {
-            return NotFound(new { message = $"Usuario con ID {id} no encontrado." });
-        }*/
-        var usuarioId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var user = await _userManager.FindByIdAsync(usuarioId);
-        var nombreUsuario = User.Identity?.Name;
-        var email = User.FindFirst(ClaimTypes.Email)?.Value;
-
-        return Ok(new
-        {
-            UsuarioId = usuarioId,
-            NombreUsuario = nombreUsuario,
-            Email = email,
-            User = user,
-        });
-    }
+  
 
     [Authorize]
     [HttpGet("me")]
     public async Task<IActionResult> GetCurrentUser()
-    {
+    {   
         var email = User.Identity.Name;
-        var user = await _userManager.FindByEmailAsync(email);
+        var user = await _userService.GetUserWithRoles(email);
+        if (user == null)
+        {
+            return Unauthorized(new { message = "Usuario no encontrado." });
+        }
 
+        
         return Ok(user);
     }
 }

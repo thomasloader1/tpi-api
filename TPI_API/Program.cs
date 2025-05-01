@@ -66,6 +66,7 @@ builder.Services.AddScoped<IDocumentProcessingService, DocumentProcessingService
 builder.Services.AddScoped<IOcrService, OcrService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 //CORS
 var frontURL = Environment.GetEnvironmentVariable("FRONT_URL");
