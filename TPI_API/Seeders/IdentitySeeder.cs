@@ -9,7 +9,7 @@ public static class IdentitySeeder
     {
         var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-        string[] roles = { "Bibliotecario", "Ayudante","Admin" };
+        string[] roles = { "Bibliotecario", "Voluntario", "Admin" };
 
         foreach (var role in roles)
         {
@@ -59,7 +59,7 @@ public static class IdentitySeeder
         {
             var user = new User
             {
-                FullName = "Ayudante Prueba",
+                FullName = "Voluntario Prueba",
                 UserName = ayudanteEmail,
                 Email = ayudanteEmail,
                 EmailConfirmed = true
@@ -69,7 +69,7 @@ public static class IdentitySeeder
 
             if (result.Succeeded)
             {
-                await userManager.AddToRolesAsync(user, new[] { "Ayudante" });
+                await userManager.AddToRolesAsync(user, new[] { "Voluntario" });
             }
         }
     }
